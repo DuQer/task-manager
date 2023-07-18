@@ -7,6 +7,7 @@ from werkzeug.security import generate_password_hash
 
 app = Flask(__name__)
 app.config['JWT_SECRET_KEY'] = 'secret-key'
+app.config['JWT_DEFAULT_REALM'] = 'jwt-realm'
 jwt = JWTManager(app)
 
 @app.route('/create-user', methods=['POST'])
@@ -43,16 +44,18 @@ def authenticate(username, password):
 def get_tasks():
     print('####')
 
-@app.route('/tasks', methods=['POST'])
+
+@app.route('/create-task', methods=['POST'])
 @jwt_required()
 def create_task():
     print('####')
+
 
 @app.route('/tasks/<int:task_id>', methods=['DELETE'])
 @jwt_required()
 def delete_task(task_id):
     print('####')
 
+
 if __name__ == '__main__':
     app.run()
-
