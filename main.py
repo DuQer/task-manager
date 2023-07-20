@@ -16,6 +16,14 @@ def create_user():
     conn = sqlite3.connect('database/database.db')
     c = conn.cursor()
 
+    c.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL,
+                password TEXT NOT NULL
+            )
+        ''')
+
     c.execute('SELECT * FROM users WHERE username=?', (username,))
     existing_user = c.fetchone()
     if existing_user:
