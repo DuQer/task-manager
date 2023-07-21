@@ -91,13 +91,30 @@ def create_task():
 @app.route('/tasks', methods=['GET'])
 @jwt_required()
 def get_tasks():
-    return 'sdsd'
+    current_user_id = get_jwt_identity()
 
+    conn = sqlite3.connect('database/database.db')
+    c = conn.cursor()
 
-@app.route('/tasks/<int:task_id>', methods=['DELETE'])
-@jwt_required()
-def delete_task(task_id):
-    print('####')
+    c.execute('SELECT * FROM tasks WHERE user_id=?', (current_user_id,))
+    tasks = c.fetchall()
+
+    conn.close()
+
+    task_list = []
+    for task in tasks:
+        task_dict = {
+            'id': task[0],
+            'user_id': task[1],
+            'title': task[2],
+            'description': task[3],
+            'creation_time': task[4],
+            'due_date': task[5],
+            'priority': task[6]
+        }
+        task_list.append(task_dict)
+
+    return jsonify(task_list), 200
 
 
 if __name__ == '__main__':
