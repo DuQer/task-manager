@@ -117,5 +117,26 @@ def get_tasks():
     return jsonify(task_list), 200
 
 
+@app.route('/tasks/<int:task_id>', methods=['DELETE'])
+@jwt_required()
+def delete_task(task_id):
+    current_user_id = get_jwt_identity()
+
+    conn = sqlite3.connect('database/database.db')
+    c = conn.cursor()
+
+    c.execute('SELECT * FROM tasks WHERE id=? AND user_id=?', (task_id, current_user_id))
+    task = c.fetchone()
+
+    if not task:
+        return {'message': 'Task not found'}, 404
+
+    c.execute('DELETE FROM tasks WHERE id=? AND user_id=?', (task_id, current_user_id))
+    conn.commit()
+    conn.close()
+
+    return {'message': 'Task deleted successfully'}, 200
+
+
 if __name__ == '__main__':
     app.run()
