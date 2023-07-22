@@ -1,6 +1,6 @@
 # Task manager
 Task Manager is a straightforward, RESTful application designed for efficient task management. It allows users to create their accounts and effectively manage their tasks.
-The application needs a Postman to work. The task manager uses the JWT token for authorization, which is returned in Postman when creating a new user. The user sends JSON with the necessary information to a given endpoint and receives a response from the API. 
+The application needs a Postman to work. The task manager uses the JWT token for authorization, which is returned in Postman when creating a new user. The user sends JSON with the necessary information and access token (in header) to a given endpoint and receives a response from the API.
 For example, the JSON for the task creation process should look like this:
 
   ```json
@@ -47,7 +47,27 @@ POST /create-task/
 | `due_date` | date | Time limit of task |
 | `priority` | integer | Priority of task |
 
+#### Get all user's tasks
+
+```json
+GET /tasks/
+```
+
+#### Delete task
+
+```json
+DELETE /tasks/{id}
+```
+
+
 ## System requirements
 To run this application you need:
 * Python 3.11.0 (or higher)
 * Postman
+* Docker
+
+## Installation
+To run this project use this command:
+  ```
+docker-compose up
+```
