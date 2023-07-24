@@ -31,9 +31,28 @@ POST /create-user/
 
 | Parameter | Type | Description
 | --- | --- | --- | 
-| `username` | string | Name of user  |
-| `password` | string | Password of user |
+| `username` | string | **Required.** Name of user  |
+| `password` | string | **Required.** Password of user |
 
+#### Update user
+
+  ```json
+PUT /update-user/{id}
+```
+
+| Parameter | Type | Description
+| --- | --- | --- | 
+| `id` | int | **Required.** ID of user  |
+| `username` | string | **Required.** New name of user  |
+
+#### Delete user
+
+  ```json
+DELETE /users/{id}
+```
+| Parameter | Type | Description
+| --- | --- | --- | 
+| `id` | int | **Required.** ID of user  |
 #### Create new task
 
   ```json
@@ -42,10 +61,10 @@ POST /create-task/
 
 | Parameter | Type | Description
 | --- | --- | --- | 
-| `title` | string | Title of task |
-| `description` | string | Description of task |
-| `due_date` | date | Time limit of task |
-| `priority` | integer | Priority of task |
+| `title` | string | **Required.** Title of task |
+| `description` | string | **Required.** Description of task |
+| `due_date` | date | **Required.** Time limit of task |
+| `priority` | integer | **Required.** Priority of task |
 
 #### Get all user's tasks
 
@@ -53,12 +72,27 @@ POST /create-task/
 GET /tasks/
 ```
 
+#### Update task
+
+  ```json
+PUT /update-task/{id}
+```
+
+| Parameter | Type | Description
+| --- | --- | --- | 
+| `title` | string | **Optional.** Title of task |
+| `description` | string | **Optional.** Description of task |
+| `due_date` | date | **Optional.** Time limit of task |
+| `priority` | integer | **Optional.** Priority of task |
+
 #### Delete task
 
 ```json
 DELETE /tasks/{id}
 ```
-
+| Parameter | Type | Description
+| --- | --- | --- | 
+| `id` | int | **Required.** ID of task  |
 
 ## System requirements
 To run this application you need:
