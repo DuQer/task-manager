@@ -35,10 +35,13 @@ def create_user():
 
     c.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, password_hash))
 
+    c.execute('SELECT id FROM users WHERE username=?', (username,))
+    user_id = c.fetchone()[0]
+
     conn.commit()
     conn.close()
 
-    access_token = create_access_token(identity=username)
+    access_token = create_access_token(identity=user_id)
 
     return {'access_token': access_token}, 201
 
@@ -46,10 +49,8 @@ def create_user():
 @app.route('/update-user/<int:user_id>', methods=['PUT'])
 @jwt_required()
 def update_user(user_id):
-    current_user_id = get_jwt_identity()
     new_username = request.json.get('new_username')
-    print(current_user_id)
-    print(user_id)
+
     if not new_username:
         return {'message': 'New username is required'}, 400
 
@@ -74,6 +75,30 @@ def update_user(user_id):
     return {'message': 'Username updated successfully'}, 200
 
 
+@app.route('/users/<int:user_id>', methods=['DELETE'])
+@jwt_required()
+def delete_user(user_id):
+    current_user_id = get_jwt_identity()
+
+    conn = sqlite3.connect('database/database.db')
+    c = conn.cursor()
+
+    c.execute('SELECT * FROM users WHERE id=?', (user_id,))
+    user = c.fetchone()
+    print(user)
+    if not user:
+        return {'message': 'User not found'}, 404
+
+    if current_user_id == user_id:
+        return {'message': 'You do not have permission to delete this user'}, 403
+
+    c.execute('DELETE FROM users WHERE id=?', (user_id,))
+    conn.commit()
+    conn.close()
+
+    return {'message': 'User deleted successfully'}, 200
+
+
 @app.route('/refresh-token', methods=['POST'])
 @jwt_required(refresh=True)
 def refresh_token():
@@ -84,6 +109,18 @@ def refresh_token():
 @jwt_required()
 def create_task():
     user_id = get_jwt_identity()
+    print(user_id)
+    conn = sqlite3.connect('database/database.db')
+    c = conn.cursor()
+
+    c.execute('SELECT * FROM users WHERE id=?', (user_id,))
+    user = c.fetchone()
+
+    conn.close()
+
+    if user is None:
+        return {'message': 'User not found or your account has been deleted'}, 403
+
     title = request.json.get('title')
     description = request.json.get('description')
     creation_time = datetime.now().strftime('%Y-%m-%d %H:%M')
@@ -98,16 +135,16 @@ def create_task():
 
     if not table_exists:
         c.execute('''
-                CREATE TABLE tasks (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    title TEXT NOT NULL,
-                    description TEXT,
-                    creation_time TEXT,
-                    due_date TEXT,
-                    priority INTEGER
-                )
-            ''')
+            CREATE TABLE tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT,
+                creation_time TEXT,
+                due_date TEXT,
+                priority INTEGER
+            )
+        ''')
 
         conn.commit()
 
@@ -148,6 +185,46 @@ def get_tasks():
         task_list.append(task_dict)
 
     return jsonify(task_list), 200
+
+
+@app.route('/update-task/<int:task_id>', methods=['PUT'])
+@jwt_required()
+def update_task(task_id):
+    user_id = get_jwt_identity()
+
+    conn = sqlite3.connect('database/database.db')
+    c = conn.cursor()
+
+    c.execute('SELECT * FROM users WHERE id=?', (user_id,))
+    user = c.fetchone()
+
+    if user is None:
+        conn.close()
+        return {'message': 'User not found or your account has been deleted'}, 403
+
+    title = request.json.get('title')
+    description = request.json.get('description')
+    due_date = request.json.get('due_date')
+    priority = request.json.get('priority')
+
+    c.execute("SELECT * FROM tasks WHERE id=?", (task_id,))
+    task = c.fetchone()
+
+    if not task:
+        conn.close()
+        return {'message': 'Task not found'}, 404
+
+    if task[1] != user_id:
+        conn.close()
+        return {'message': 'You do not have permission to update this task'}, 403
+
+    c.execute('UPDATE tasks SET title=?, description=?, due_date=?, priority=? WHERE id=?',
+              (title, description, due_date, priority, task_id))
+
+    conn.commit()
+    conn.close()
+
+    return {'message': 'Task updated successfully'}, 200
 
 
 @app.route('/tasks/<int:task_id>', methods=['DELETE'])
