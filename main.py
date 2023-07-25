@@ -1,13 +1,22 @@
 import sqlite3
 from flask import Flask, request, jsonify
-from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity, create_refresh_token
 from werkzeug.security import generate_password_hash
-from datetime import datetime
+from datetime import datetime, timedelta
+
 app = Flask(__name__)
 app.config['JWT_SECRET_KEY'] = 'secret-key'
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
+app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=30)
 jwt = JWTManager(app)
 
-refresh_tokens = {}
+
+@app.route("/refresh", methods=["POST"])
+@jwt_required(refresh=True)
+def refresh():
+    identity = get_jwt_identity()
+    access_token = create_access_token(identity=identity)
+    return jsonify(access_token=access_token)
 
 
 @app.route('/create-user', methods=['POST'])
@@ -37,13 +46,14 @@ def create_user():
 
     c.execute('SELECT id FROM users WHERE username=?', (username,))
     user_id = c.fetchone()[0]
-
+    print(user_id)
     conn.commit()
     conn.close()
 
     access_token = create_access_token(identity=user_id)
+    refresh_token = create_refresh_token(identity=user_id)
 
-    return {'access_token': access_token}, 201
+    return jsonify(access_token=access_token, refresh_token=refresh_token), 201
 
 
 @app.route('/update-user/<int:user_id>', methods=['PUT'])
@@ -97,12 +107,6 @@ def delete_user(user_id):
     conn.close()
 
     return {'message': 'User deleted successfully'}, 200
-
-
-@app.route('/refresh-token', methods=['POST'])
-@jwt_required(refresh=True)
-def refresh_token():
-    print('lol')
 
 
 @app.route('/create-task', methods=['POST'])
