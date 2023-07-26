@@ -109,6 +109,27 @@ def delete_user(user_id):
     return {'message': 'User deleted successfully'}, 200
 
 
+@app.route('/users', methods=['GET'])
+def get_users():
+    conn = sqlite3.connect('database/database.db')
+    c = conn.cursor()
+
+    c.execute('SELECT * FROM users')
+    users = c.fetchall()
+
+    conn.close()
+
+    user_list = []
+    for user in users:
+        user_data = {
+            'id': user[0],
+            'username': user[1]
+        }
+        user_list.append(user_data)
+
+    return jsonify(user_list), 200
+
+
 @app.route('/create-task', methods=['POST'])
 @jwt_required()
 def create_task():
