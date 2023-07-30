@@ -46,7 +46,7 @@ def create_user():
 
     c.execute('SELECT id FROM users WHERE username=?', (username,))
     user_id = c.fetchone()[0]
-    print(user_id)
+
     conn.commit()
     conn.close()
 
@@ -95,7 +95,7 @@ def delete_user(user_id):
 
     c.execute('SELECT * FROM users WHERE id=?', (user_id,))
     user = c.fetchone()
-    print(user)
+
     if not user:
         return {'message': 'User not found'}, 404
 
@@ -134,7 +134,7 @@ def get_users():
 @jwt_required()
 def create_task():
     user_id = get_jwt_identity()
-    print(user_id)
+
     conn = sqlite3.connect('database/database.db')
     c = conn.cursor()
 
@@ -269,6 +269,7 @@ def delete_task(task_id):
     conn.close()
 
     return {'message': 'Task deleted successfully'}, 200
+
 
 @app.route('/all-tasks', methods=['GET'])
 def get_all_tasks():
