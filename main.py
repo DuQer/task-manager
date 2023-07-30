@@ -183,15 +183,13 @@ def create_task():
     return jsonify({'task_id': task_id, 'message': 'Task created successfully'}), 201
 
 
-@app.route('/tasks', methods=['GET'])
+@app.route('/tasks/<int:user_id>', methods=['GET'])
 @jwt_required()
-def get_tasks():
-    current_user_id = get_jwt_identity()
-
+def get_user_tasks(user_id):
     conn = sqlite3.connect('database/database.db')
     c = conn.cursor()
 
-    c.execute('SELECT * FROM tasks WHERE user_id=?', (current_user_id,))
+    c.execute('SELECT * FROM tasks WHERE user_id=?', (user_id,))
     tasks = c.fetchall()
 
     conn.close()
@@ -252,7 +250,7 @@ def update_task(task_id):
     return {'message': 'Task updated successfully'}, 200
 
 
-@app.route('/tasks/<int:task_id>', methods=['DELETE'])
+@app.route('/delete-task/<int:task_id>', methods=['DELETE'])
 @jwt_required()
 def delete_task(task_id):
     current_user_id = get_jwt_identity()
@@ -271,6 +269,31 @@ def delete_task(task_id):
     conn.close()
 
     return {'message': 'Task deleted successfully'}, 200
+
+@app.route('/all-tasks', methods=['GET'])
+def get_all_tasks():
+    conn = sqlite3.connect('database/database.db')
+    c = conn.cursor()
+
+    c.execute('SELECT * FROM tasks')
+    tasks = c.fetchall()
+
+    conn.close()
+
+    task_list = []
+    for task in tasks:
+        task_data = {
+            'id': task[0],
+            'user_id': task[1],
+            'title': task[2],
+            'description': task[3],
+            'creation_time': task[4],
+            'due_date': task[5],
+            'priority': task[6]
+        }
+        task_list.append(task_data)
+
+    return jsonify(task_list), 200
 
 
 if __name__ == '__main__':
