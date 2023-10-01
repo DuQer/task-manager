@@ -3,9 +3,12 @@ from flask import Flask, request, jsonify
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity, create_refresh_token
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
+import secrets
+
+secret_key = secrets.token_hex(16)
 
 app = Flask(__name__)
-app.config['JWT_SECRET_KEY'] = 'secret-key'
+app.config['JWT_SECRET_KEY'] = secret_key
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=30)
 jwt = JWTManager(app)
