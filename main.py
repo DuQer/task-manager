@@ -1,5 +1,7 @@
 import sqlite3
+import jwt
 from flask import Flask, request, jsonify
+from functools import wraps
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity, create_refresh_token
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
@@ -12,6 +14,30 @@ app.config['JWT_SECRET_KEY'] = secret_key
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=30)
 jwt = JWTManager(app)
+
+
+def jwt_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        token = None
+
+        if 'Authorization' in request.headers:
+            token = request.headers['Authorization']
+
+        if not token:
+            return {'message': 'Token is missing'}, 401
+
+        try:
+            decoded_token = jwt.decode(token, 'secret-key', algorithms=['HS256'])
+            current_user_id = decoded_token['sub']
+        except jwt.ExpiredSignatureError:
+            return {'message': 'Token has expired'}, 401
+        except jwt.InvalidTokenError:
+            return {'message': 'Invalid token'}, 401
+
+        return f(current_user_id, *args, **kwargs)
+
+    return decorated_function
 
 
 @app.route("/refresh", methods=["POST"])
