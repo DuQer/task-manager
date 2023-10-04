@@ -1,43 +1,23 @@
 import sqlite3
-import jwt
 from flask import Flask, request, jsonify
-from functools import wraps
+from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity, create_refresh_token
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
 import secrets
 
+
 secret_key = secrets.token_hex(16)
 
 app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database/database.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 app.config['JWT_SECRET_KEY'] = secret_key
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=30)
+
 jwt = JWTManager(app)
-
-
-# def jwt_required(f):
-#     @wraps(f)
-#     def decorated_function(*args, **kwargs):
-#         token = None
-#
-#         if 'Authorization' in request.headers:
-#             token = request.headers['Authorization']
-#
-#         if not token:
-#             return {'message': 'Token is missing'}, 401
-#
-#         try:
-#             decoded_token = jwt.decode(token, 'secret-key', algorithms=['HS256'])
-#             current_user_id = decoded_token['sub']
-#         except jwt.ExpiredSignatureError:
-#             return {'message': 'Token has expired'}, 401
-#         except jwt.InvalidTokenError:
-#             return {'message': 'Invalid token'}, 401
-#
-#         return f(current_user_id, *args, **kwargs)
-#
-#     return decorated_function
 
 
 @app.route("/refresh", methods=["POST"])
@@ -70,7 +50,7 @@ def create_user():
         if existing_user:
             return {'message': 'Username already exists'}, 409
 
-        password_hash = generate_password_hash(password)
+        password_hash = generate_password_hash(password, method='scrypt')
 
         c.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, password_hash))
 
@@ -151,6 +131,7 @@ def delete_user(user_id):
 
 
 @app.route('/users', methods=['GET'])
+@jwt_required()
 def get_users():
     try:
         conn = sqlite3.connect('database/database.db')
@@ -329,6 +310,7 @@ def delete_task(task_id):
 
 
 @app.route('/all-tasks', methods=['GET'])
+@jwt_required()
 def get_all_tasks():
     try:
         conn = sqlite3.connect('database/database.db')

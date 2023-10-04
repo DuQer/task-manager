@@ -1,20 +1,8 @@
-class User(object):
-    def __init__(self, id, username, password):
-        self.id = id
-        self.username = username
-        self.password = password
+from main import db
 
 
-class Task(object):
-    def __init__(self, id, name, description):
-        self.id = id
-        self.name = name
-        self.description = description
-
-
-users = [
-    User(1, 'user1', 'password1'),
-    User(2, 'user2', 'password2')
-]
-
-tasks = {}
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password = db.Column(db.String(120), nullable=False)
+    tasks = db.relationship('Task', backref='user', lazy=True)
