@@ -61,27 +61,19 @@ def create_user():
 def update_user(user_id):
     try:
         new_username = request.json.get('new_username')
-
         if not new_username:
             return {'message': 'New username is required'}, 400
 
-        conn = sqlite3.connect('database/database.db')
-        c = conn.cursor()
-
-        c.execute('SELECT * FROM users WHERE id=?', (user_id,))
-        user = c.fetchone()
-
+        user = User.query.get(user_id)
         if not user:
             return {'message': 'User not found'}, 404
 
-        c.execute('SELECT * FROM users WHERE username=?', (new_username,))
-        existing_user = c.fetchone()
+        existing_user = User.query.filter_by(username=new_username).first()
         if existing_user:
             return {'message': 'Username already exists'}, 409
 
-        c.execute('UPDATE users SET username=? WHERE id=?', (new_username, user_id))
-        conn.commit()
-        conn.close()
+        user.username = new_username
+        db.session.commit()
 
         return {'message': 'Username updated successfully'}, 200
 
@@ -94,12 +86,7 @@ def update_user(user_id):
 def delete_user(user_id):
     try:
         current_user_id = get_jwt_identity()
-
-        conn = sqlite3.connect('database/database.db')
-        c = conn.cursor()
-
-        c.execute('SELECT * FROM users WHERE id=?', (user_id,))
-        user = c.fetchone()
+        user = User.query.get(user_id)
 
         if not user:
             return {'message': 'User not found'}, 404
@@ -107,9 +94,8 @@ def delete_user(user_id):
         if current_user_id == user_id:
             return {'message': 'You do not have permission to delete this user'}, 403
 
-        c.execute('DELETE FROM users WHERE id=?', (user_id,))
-        conn.commit()
-        conn.close()
+        db.session.delete(user)
+        db.session.commit()
 
         return {'message': 'User deleted successfully'}, 200
 
