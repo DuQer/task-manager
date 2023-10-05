@@ -107,24 +107,9 @@ def delete_user(user_id):
 @jwt_required()
 def get_users():
     try:
-        conn = sqlite3.connect('database/database.db')
-        c = conn.cursor()
-
-        c.execute('SELECT * FROM users')
-        users = c.fetchall()
-
-        conn.close()
-
-        user_list = []
-        for user in users:
-            user_data = {
-                'id': user[0],
-                'username': user[1]
-            }
-            user_list.append(user_data)
-
+        users = User.query.all()
+        user_list = [{'id': user.id, 'username': user.username} for user in users]
         return jsonify(user_list), 200
-
     except Exception as e:
         return {'message': f'An error occurred: {str(e)}'}, 500
 
@@ -134,48 +119,22 @@ def get_users():
 def create_task():
     try:
         user_id = get_jwt_identity()
-
-        conn = sqlite3.connect('database/database.db')
-        c = conn.cursor()
-
-        c.execute('SELECT * FROM users WHERE id=?', (user_id,))
-        user = c.fetchone()
+        user = User.query.get(user_id)
 
         if user is None:
             return {'message': 'User not found or your account has been deleted'}, 403
 
-        title = request.json.get('title')
-        description = request.json.get('description')
-        creation_time = datetime.now().strftime('%Y-%m-%d %H:%M')
-        due_date = request.json.get('due_date')
-        priority = request.json.get('priority')
+        data = request.get_json()
+        title = data.get('title')
+        description = data.get('description')
+        due_date = data.get('due_date')
+        priority = data.get('priority')
 
-        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='tasks'")
-        table_exists = c.fetchone()
+        new_task = Task(user_id=user_id, title=title, description=description, due_date=due_date, priority=priority)
+        db.session.add(new_task)
+        db.session.commit()
 
-        if not table_exists:
-            c.execute('''
-                CREATE TABLE tasks (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    title TEXT NOT NULL,
-                    description TEXT,
-                    creation_time TEXT,
-                    due_date TEXT,
-                    priority INTEGER
-                )
-            ''')
-
-            conn.commit()
-
-        c.execute('INSERT INTO tasks (user_id, title, description, creation_time, due_date, priority) VALUES (?, ?, ?, ?, ?, ?)',
-                  (user_id, title, description, creation_time, due_date, priority))
-        task_id = c.lastrowid
-
-        conn.commit()
-        conn.close()
-
-        return jsonify({'task_id': task_id, 'message': 'Task created successfully'}), 201
+        return jsonify({'task_id': new_task.id, 'message': 'Task created successfully'}), 201
 
     except Exception as e:
         return {'message': f'An error occurred: {str(e)}'}, 500
@@ -185,29 +144,9 @@ def create_task():
 @jwt_required()
 def get_user_tasks(user_id):
     try:
-        conn = sqlite3.connect('database/database.db')
-        c = conn.cursor()
-
-        c.execute('SELECT * FROM tasks WHERE user_id=?', (user_id,))
-        tasks = c.fetchall()
-
-        conn.close()
-
-        task_list = []
-        for task in tasks:
-            task_dict = {
-                'id': task[0],
-                'user_id': task[1],
-                'title': task[2],
-                'description': task[3],
-                'creation_time': task[4],
-                'due_date': task[5],
-                'priority': task[6]
-            }
-            task_list.append(task_dict)
-
+        tasks = Task.query.filter_by(user_id=user_id).all()
+        task_list = [{'id': task.id, 'title': task.title, 'description': task.description, 'due_date': task.due_date, 'priority': task.priority} for task in tasks]
         return jsonify(task_list), 200
-
     except Exception as e:
         return {'message': f'An error occurred: {str(e)}'}, 500
 
@@ -217,38 +156,21 @@ def get_user_tasks(user_id):
 def update_task(task_id):
     try:
         user_id = get_jwt_identity()
+        task = Task.query.get(task_id)
 
-        conn = sqlite3.connect('database/database.db')
-        c = conn.cursor()
-
-        c.execute('SELECT * FROM users WHERE id=?', (user_id,))
-        user = c.fetchone()
-
-        if user is None:
-            conn.close()
-            return {'message': 'User not found or your account has been deleted'}, 403
-
-        title = request.json.get('title')
-        description = request.json.get('description')
-        due_date = request.json.get('due_date')
-        priority = request.json.get('priority')
-
-        c.execute("SELECT * FROM tasks WHERE id=?", (task_id,))
-        task = c.fetchone()
-
-        if not task:
-            conn.close()
+        if task is None:
             return {'message': 'Task not found'}, 404
 
-        if task[1] != user_id:
-            conn.close()
+        if task.user_id != user_id:
             return {'message': 'You do not have permission to update this task'}, 403
 
-        c.execute('UPDATE tasks SET title=?, description=?, due_date=?, priority=? WHERE id=?',
-                  (title, description, due_date, priority, task_id))
+        data = request.get_json()
+        task.title = data.get('title', task.title)
+        task.description = data.get('description', task.description)
+        task.due_date = data.get('due_date', task.due_date)
+        task.priority = data.get('priority', task.priority)
 
-        conn.commit()
-        conn.close()
+        db.session.commit()
 
         return {'message': 'Task updated successfully'}, 200
 
@@ -256,25 +178,22 @@ def update_task(task_id):
         return {'message': f'An error occurred: {str(e)}'}, 500
 
 
+
 @app.route('/delete-task/<int:task_id>', methods=['DELETE'])
 @jwt_required()
 def delete_task(task_id):
     try:
-        current_user_id = get_jwt_identity()
+        user_id = get_jwt_identity()
+        task = Task.query.get(task_id)
 
-        conn = sqlite3.connect('database/database.db')
-        c = conn.cursor()
-
-        c.execute('SELECT * FROM tasks WHERE id=? AND user_id=?', (task_id, current_user_id))
-        task = c.fetchone()
-
-        if not task:
-            conn.close()
+        if task is None:
             return {'message': 'Task not found'}, 404
 
-        c.execute('DELETE FROM tasks WHERE id=? AND user_id=?', (task_id, current_user_id))
-        conn.commit()
-        conn.close()
+        if task.user_id != user_id:
+            return {'message': 'You do not have permission to delete this task'}, 403
+
+        db.session.delete(task)
+        db.session.commit()
 
         return {'message': 'Task deleted successfully'}, 200
 
@@ -286,31 +205,23 @@ def delete_task(task_id):
 @jwt_required()
 def get_all_tasks():
     try:
-        conn = sqlite3.connect('database/database.db')
-        c = conn.cursor()
-
-        c.execute('SELECT * FROM tasks')
-        tasks = c.fetchall()
-
-        conn.close()
-
-        task_list = []
-        for task in tasks:
-            task_data = {
-                'id': task[0],
-                'user_id': task[1],
-                'title': task[2],
-                'description': task[3],
-                'creation_time': task[4],
-                'due_date': task[5],
-                'priority': task[6]
+        tasks = Task.query.all()
+        task_list = [
+            {
+                'id': task.id,
+                'user_id': task.user_id,
+                'title': task.title,
+                'description': task.description,
+                'creation_time': task.creation_time,
+                'due_date': task.due_date,
+                'priority': task.priority
             }
-            task_list.append(task_data)
-
+            for task in tasks
+        ]
         return jsonify(task_list), 200
-
     except Exception as e:
         return {'message': f'An error occurred: {str(e)}'}, 500
+
 
 
 if __name__ == '__main__':
