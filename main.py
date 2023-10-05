@@ -1,24 +1,27 @@
 import sqlite3
 from flask import Flask, request, jsonify
+from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity, create_refresh_token
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
 import secrets
 
+from models import User, Task
 
 secret_key = secrets.token_hex(16)
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database/database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
 app.config['JWT_SECRET_KEY'] = secret_key
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=30)
 
 jwt = JWTManager(app)
-
+db = SQLAlchemy()
+db.init_app(app)
+migrate = Migrate(app, db)
 
 @app.route("/refresh", methods=["POST"])
 @jwt_required(refresh=True)
@@ -31,35 +34,19 @@ def refresh():
 @app.route('/create-user', methods=['POST'])
 def create_user():
     try:
-        username = request.json.get('username')
-        password = request.json.get('password')
+        data = request.get_json()
+        username = data.get('username')
+        password = generate_password_hash(data.get('password'))
 
-        conn = sqlite3.connect('database/database.db')
-        c = conn.cursor()
-
-        c.execute('''
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT NOT NULL,
-                    password TEXT NOT NULL
-                )
-            ''')
-
-        c.execute('SELECT * FROM users WHERE username=?', (username,))
-        existing_user = c.fetchone()
+        existing_user = User.query.filter_by(username=username).first()
         if existing_user:
             return {'message': 'Username already exists'}, 409
 
-        password_hash = generate_password_hash(password, method='scrypt')
+        new_user = User(username=username, password=password)
+        db.session.add(new_user)
+        db.session.commit()
 
-        c.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, password_hash))
-
-        c.execute('SELECT id FROM users WHERE username=?', (username,))
-        user_id = c.fetchone()[0]
-
-        conn.commit()
-        conn.close()
-
+        user_id = new_user.id
         access_token = create_access_token(identity=user_id)
         refresh_token = create_refresh_token(identity=user_id)
 
