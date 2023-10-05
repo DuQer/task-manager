@@ -1,27 +1,18 @@
-import sqlite3
 from flask import Flask, request, jsonify
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity, create_refresh_token
 from werkzeug.security import generate_password_hash
-from datetime import datetime, timedelta
+from datetime import timedelta
 import secrets
 
 from models import User, Task
+from app import create_app, db
 
-secret_key = secrets.token_hex(16)
 
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JWT_SECRET_KEY'] = secret_key
-app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
-app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=30)
-
+app = create_app()
 jwt = JWTManager(app)
-db = SQLAlchemy()
-db.init_app(app)
-migrate = Migrate(app, db)
+
 
 @app.route("/refresh", methods=["POST"])
 @jwt_required(refresh=True)
