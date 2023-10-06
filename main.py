@@ -6,11 +6,21 @@ from werkzeug.security import generate_password_hash
 from datetime import timedelta
 import secrets
 
-from models import User, Task
 from app import create_app, db
-
+from models import User, Task
 
 app = create_app()
+
+
+secret_key = secrets.token_hex(16)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///C:/Users/DuQer/Desktop/task-manager-master/database/database.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['JWT_SECRET_KEY'] = secret_key
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
+app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=30)
+
+
+migrate = Migrate(app, db)
 jwt = JWTManager(app)
 
 
@@ -24,27 +34,28 @@ def refresh():
 
 @app.route('/create-user', methods=['POST'])
 def create_user():
-    try:
-        data = request.get_json()
-        username = data.get('username')
-        password = generate_password_hash(data.get('password'))
+    with app.app_context():
+        try:
+            data = request.get_json()
+            username = data.get('username')
+            password = generate_password_hash(data.get('password'))
 
-        existing_user = User.query.filter_by(username=username).first()
-        if existing_user:
-            return {'message': 'Username already exists'}, 409
+            existing_user = User.query.filter_by(username=username).first()
+            if existing_user:
+                return {'message': 'Username already exists'}, 409
 
-        new_user = User(username=username, password=password)
-        db.session.add(new_user)
-        db.session.commit()
+            new_user = User(username=username, password=password)
+            db.session.add(new_user)
+            db.session.commit()
 
-        user_id = new_user.id
-        access_token = create_access_token(identity=user_id)
-        refresh_token = create_refresh_token(identity=user_id)
+            user_id = new_user.id
+            access_token = create_access_token(identity=user_id)
+            refresh_token = create_refresh_token(identity=user_id)
 
-        return jsonify(access_token=access_token, refresh_token=refresh_token), 201
+            return jsonify(access_token=access_token, refresh_token=refresh_token), 201
 
-    except Exception as e:
-        return {'message': f'An error occurred: {str(e)}'}, 500
+        except Exception as e:
+            return {'message': f'An error occurred: {str(e)}'}, 500
 
 
 @app.route('/update-user/<int:user_id>', methods=['PUT'])
@@ -169,7 +180,6 @@ def update_task(task_id):
         return {'message': f'An error occurred: {str(e)}'}, 500
 
 
-
 @app.route('/delete-task/<int:task_id>', methods=['DELETE'])
 @jwt_required()
 def delete_task(task_id):
@@ -214,6 +224,7 @@ def get_all_tasks():
         return {'message': f'An error occurred: {str(e)}'}, 500
 
 
-
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
     app.run()
