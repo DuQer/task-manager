@@ -1,6 +1,5 @@
-from flask import Flask, request, jsonify
+from flask import request, jsonify
 from flask_migrate import Migrate
-from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity, create_refresh_token
 from werkzeug.security import generate_password_hash
 from datetime import timedelta
