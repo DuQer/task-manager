@@ -16,7 +16,7 @@ For example, the JSON for the task creation process should look like this:
 - Python
 - Flask
 - JWT token
-- SQLite
+- SQLAlchemy
 - Werkzeug
 - Postman
 
