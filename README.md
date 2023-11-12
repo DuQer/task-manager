@@ -1,4 +1,12 @@
 # Task manager
+## Table of contents
+* [Overview](#overview)
+* [Technology stack](#technology-stack)
+* [API Reference](#api-reference)
+* [System requirements](#system-requirements)
+* [Installation](#installation)
+
+## Overview
 Task Manager is a straightforward, RESTful application designed for efficient task management. It allows users to create their accounts and effectively manage their tasks.
 The application needs a Postman to work. The task manager uses the JWT token for authorization, which is returned in Postman when creating a new user. The user sends JSON with the necessary information and access token (in header) to a given endpoint and receives a response from the API.
 For example, the JSON for the task creation process should look like this:
