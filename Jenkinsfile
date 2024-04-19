@@ -9,7 +9,6 @@ pipeline {
         }
         stage('Build') {
             steps {
-                git branch: 'master', url: 'https://github.com/DuQer/task-manager.git'
                 sh 'python3 main.py'
             }
         }
