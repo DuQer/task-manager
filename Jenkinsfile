@@ -2,11 +2,11 @@ pipeline {
     agent any
 
     stages {
-        stage('Checkout') {
-            steps {
-                checkout([$class: 'GitSCM', branches: [[name: 'master']], doGenerateSubmoduleConfigurations: false,  extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'Jenkins', url: 'https://github.com/DuQer/task-manager.git']]])
-            }
-        }
+        // stage('Checkout') {
+        //     steps {
+        //         checkout([$class: 'GitSCM', branches: [[name: 'master']], doGenerateSubmoduleConfigurations: false,  extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'Jenkins', url: 'https://github.com/DuQer/task-manager.git']]])
+        //     }
+        // }
         stage('Build') {
             steps {
                 sh 'python3 main.py'
