@@ -9,7 +9,7 @@ pipeline {
         // }
         stage('Build') {
             steps {
-                sh 'pip install -r requirements.txt'
+                sh 'pip install -r requirements.txt --break-system-packages'
                 sh 'python3 main.py'
             }
         }
